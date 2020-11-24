@@ -84,14 +84,12 @@
     bind:inputElem
     bind:luigiCustomSearchRenderer__slot
   />
-  {#if !(hideNav||hideSideNav)}
   <LeftNav
     pathData="{navigationPath}"
     pathParams="{pathParams}"
     on:handleClick="{handleNavClick}"
     on:resizeTabNav="{onResizeTabNav}"
   />
-  {/if}
   {#if (tabNav && !hideNav)}
   <TabNav
     pathData="{navigationPath}"
@@ -118,8 +116,9 @@
     createEventDispatcher
   } from 'svelte';
   import { fade } from 'svelte/transition';
-  import { CSS_BREAKPOINTS } from './utilities/constants';
+  import { CSS_BREAKPOINTS, EVENT_PREFIXES } from './utilities/constants';
   import {
+    CustomListenerHelpers,
     EventListenerHelpers,
     GenericHelpers,
     StateHelpers,
@@ -143,6 +142,7 @@
   import { MessagesListeners } from './services/messages-listeners';
   import { thirdPartyCookiesStatus } from './utilities/third-party-cookies-check.js';
   import { NodeDataManagementStorage } from './services/node-data-management.js';
+  import { LifecycleHooks } from './services/lifecycle-hooks.js';
 
   const dispatch = createEventDispatcher();
 
@@ -419,7 +419,15 @@
           getComponentWrapper(),
           node,
           config
-        );
+        ).then(() => {
+          CustomListenerHelpers.dispatchEvent(
+            EVENT_PREFIXES.navigation + 'routeChanged',
+            {
+              component: getComponentWrapper().get(),
+              path: currentPath
+            }
+          );
+        });
       },
       ['navigation.nodes']
     );
@@ -435,7 +443,17 @@
 
       closeSplitView();
 
-      Routing.handleRouteChange(path, getComponentWrapper(), node, config);
+      Routing.handleRouteChange(path, getComponentWrapper(), node, config).then(
+        () => {
+          CustomListenerHelpers.dispatchEvent(
+            EVENT_PREFIXES.navigation + 'routeChanged',
+            {
+              component: getComponentWrapper().get(),
+              path
+            }
+          );
+        }
+      );
     });
   };
 
@@ -1101,6 +1119,10 @@
           if (loadingIndicatorAutoHideEnabled) {
             showLoadingIndicator = false;
           }
+          CustomListenerHelpers.dispatchEvent(
+            EVENT_PREFIXES.navigation + 'showLoadingIndicator',
+            showLoadingIndicator
+          );
 
           ViewGroupPreloading.preload();
         } else if (iframe.luigi.preloading) {
@@ -1121,10 +1143,18 @@
 
       if ('luigi.show-loading-indicator' === e.data.msg) {
         showLoadingIndicator = true;
+        CustomListenerHelpers.dispatchEvent(
+          EVENT_PREFIXES.navigation + 'showLoadingIndicator',
+          showLoadingIndicator
+        );
       }
 
       if ('luigi.hide-loading-indicator' === e.data.msg) {
         showLoadingIndicator = false;
+        CustomListenerHelpers.dispatchEvent(
+          EVENT_PREFIXES.navigation + 'showLoadingIndicator',
+          showLoadingIndicator
+        );
       }
 
       if ('luigi.navigation.open' === e.data.msg) {
