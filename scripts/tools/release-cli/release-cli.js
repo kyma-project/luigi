@@ -140,7 +140,7 @@ function addToChangelog(versionText, changelog, lastline) {
 (async () => {
   logHeadline('Preparing new release.');
 
-  const releases = await getReleases();
+  const releases = process.env.NIGHTLY === 'true' ? [] : await getReleases();
   const nextVersion = getNextVersion();
 
   // NIGHTLY BUILD
